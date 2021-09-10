@@ -1,0 +1,16 @@
+import { request as requestHttp } from 'http'
+import { request as requestHttps } from 'https'
+
+import { Request, Response } from './http'
+
+export const http = <A>({ url, ...options }: Request<A>): Promise<Response<A>> => {
+  console.log(url, options)
+  return new Promise(resolve => {
+    const c = url.protocol === 'https:'
+      ? requestHttps(url.toString(), options, resolve)
+      : requestHttp(url.toString(), options, resolve)
+
+    if (options.method === 'POST' && options.body) c.write(options.body)
+    c.end()
+  })
+}
