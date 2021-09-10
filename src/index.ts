@@ -29,7 +29,7 @@ const getPetsNearIPAddress = getPetsNear(env)
 
 fastify({ logger: true })
   .get('/', async (req, res) => {
-    const ip = decodeIPAddress(req.ip)
+    const ip = decodeIPAddress('72.65.255.176')
     if (ip == null) return res.status(400).send()
 
     const pets = await getPetsNearIPAddress(ip)

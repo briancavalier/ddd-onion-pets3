@@ -18,8 +18,12 @@ export const getIPAddressLocation = ({ http, radarAPIKey }: RadarEnv) => (ip: IP
 export const decodeRadarLocation = (x: unknown): Location | null => {
   if (x == null || Array.isArray(x) || typeof x !== 'object') return null
 
-  const { latitude, longitude, city, state } = x as Record<string, unknown>
+  const { address } = x as Record<string, Record<string, unknown>>
+  if (!address) return null
 
+  console.log(address)
+  const { latitude, longitude, city, state } = address
+  console.log(latitude, longitude, city, state)
   if (
     typeof latitude !== 'number' ||
     typeof longitude !== 'number' ||
