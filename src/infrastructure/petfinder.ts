@@ -1,4 +1,4 @@
-import { Location, Pet } from '../domain'
+import { Location, Pet } from '../domain/pets'
 import {
   Decode, ErrorOf, OutputOf, assert, list, listOf, mapOutput, pipe, properties, record, string, url
 } from '../lib/decode'

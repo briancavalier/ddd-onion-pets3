@@ -1,7 +1,7 @@
 // export type GetLocation<UserInfo, Location> = (u: UserInfo) => Promise<Location | null>
 
-import { IPAddress } from '../application'
-import { Location } from '../domain'
+import { IPAddress } from '../application/getPetsNear'
+import { Location } from '../domain/pets'
 import { Http, get, jsonRequest } from './http'
 
 export type RadarEnv = {

@@ -1,6 +1,6 @@
 import fastify from 'fastify'
 
-import { IPAddress, getPetsNear } from './application'
+import { IPAddress, getPetsNear } from './application/getPetsNear'
 import { http } from './infrastructure/http-node'
 import { PetfinderAuth, getPetfinderPets } from './infrastructure/petfinder'
 import { getIPAddressLocation } from './infrastructure/radar'
