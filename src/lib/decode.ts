@@ -37,7 +37,24 @@ export const mapOutput = <I, O, R, E>(d: Decode<I, O, E>, f: (o: O) => R): Decod
     return o.ok ? ok(f(o.value)) : fail(o.error)
   }
 
+export const or = <I1, I2, O1, O2, E1, E2>(d1: Decode<I1, O1, E1>, d2: Decode<I2, O2, E2>): Decode<I1 & I2, O1 | O2, [E1, E2]> =>
+  i => {
+    const r1 = d1(i)
+    if (r1.ok) return r1
+
+    const r2 = d2(i)
+    if (r2.ok) return r2
+
+    return fail([r1.error, r2.error])
+  }
+
+export const nullable = <I, O, E>(d: Decode<I, O, E>) =>
+  or(d, exactly(null))
+
 export type UnexpectedInput<I> = { type: 'UnexpectedInput', input: I }
+
+export const exactly = <A>(a: A): Decode<unknown, A, UnexpectedInput<unknown>> =>
+  input => input === a ? ok(input as A) : fail({ type: 'UnexpectedInput', input })
 
 export const is = <A extends I, I = unknown>(p: (input: I) => input is A): Decode<I, A, UnexpectedInput<I>> =>
   input => p(input)
