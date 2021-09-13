@@ -123,7 +123,7 @@ export interface JsonObject extends Record<string, Json> { }
 
 export type JsonParseError = { type: 'JsonParseError', error: unknown }
 
-export const json = (s: string): DecodeResult<Json, unknown> => {
+export const json = (s: string): DecodeResult<Json, JsonParseError> => {
   try {
     return ok(JSON.parse(s))
   } catch (e) {
