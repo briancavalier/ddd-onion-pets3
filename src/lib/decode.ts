@@ -80,27 +80,27 @@ export const listOf = <I, O, E>(d: Decode<I, O, E>): Decode<readonly I[], readon
     return ok(r) as Ok<readonly O[]>
   }
 
-export const record = is((x: unknown): x is Record<PropertyKey, unknown> => Object.prototype.toString.call(x) === '[object Object]')
+export const record = is((x: unknown): x is Record<string, unknown> => Object.prototype.toString.call(x) === '[object Object]')
 
-type DecodeRecordResult<R extends Record<PropertyKey, Decode<unknown, unknown, unknown>>> = {
+type DecodeRecordResult<R extends Record<string, Decode<unknown, unknown, unknown>>> = {
   readonly [K in keyof R]: OutputOf<R[K]>
 }
 
-type DecodeRecordError<R extends Record<PropertyKey, Decode<unknown, unknown, unknown>>> = {
+type DecodeRecordError<R extends Record<string, Decode<unknown, unknown, unknown>>> = {
   readonly [K in keyof R]: ErrorOf<R[K]>
 }
 
 type MissingKey<K> = { type: 'MissingKey', key: K }
 
-export const properties = <R extends Record<PropertyKey, Decode<unknown, unknown, unknown>>>(r: R): Decode<Record<PropertyKey, unknown>, DecodeRecordResult<R>, MissingKey<keyof R> | AtKey<keyof R, DecodeRecordError<R>[keyof R]>> =>
+export const properties = <R extends Record<string, Decode<unknown, unknown, unknown>>>(r: R): Decode<Record<string, unknown>, DecodeRecordResult<R>, MissingKey<keyof R> | AtKey<keyof R, DecodeRecordError<R>[keyof R]>> =>
   ri => {
-    const ro: Record<PropertyKey, unknown> = {}
-    const rk = (Object.keys(r) as (keyof typeof r)[])
-    for (const k of rk) {
+    const ro: Record<string, unknown> = {}
+    for (const k of Object.keys(r)) {
       if (!ri.hasOwnProperty(k)) return fail({ type: 'MissingKey', key: k })
 
       const ir = decode(r[k], ri[k])
       if (!ir.ok) return fail({ type: 'AtKey', key: k, error: ir.error } as AtKey<typeof k, DecodeRecordError<R>[typeof k]>)
+
       ro[k] = ir.value
     }
 
