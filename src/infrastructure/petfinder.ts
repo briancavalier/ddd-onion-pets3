@@ -1,23 +1,10 @@
 import { Location, Pet } from '../domain'
+import {
+  Decode, ErrorOf, OutputOf, assert, list, listOf, mapOutput, pipe, properties, record, string, url
+} from '../lib/decode'
 import { Http, get, jsonRequest, post } from './http'
 
-export type PetfinderPets = {
-  animals: readonly Animal[]
-}
-
-export type Animal = {
-  name: string,
-  url: string,
-  photos: readonly Photo[]
-}
-
-export type Photo = {
-  medium: string
-}
-
-export type PetfinderToken = {
-  access_token: string
-}
+export type PetfinderToken = OutputOf<typeof decodeToken>
 
 export type PetfinderAuth = {
   grant_type: 'client_credentials',
@@ -37,17 +24,24 @@ export const getPetfinderPets = (e: PetfinderEnv) => async (l: Location): Promis
 
 export const petfinderAuth = (http: Http, auth: PetfinderAuth): Promise<PetfinderToken> =>
   jsonRequest(http, post(new URL('https://api.petfinder.com/v2/oauth2/token'), JSON.stringify(auth)))
-    .then(decodeToken)
+    .then(assert(decodeToken))
 
 export const petfinderPets = (http: Http, { access_token }: PetfinderToken, l: Location): Promise<readonly Pet[]> =>
   jsonRequest(http,
     get(new URL(`https://api.petfinder.com/v2/animals?location=${l.latitude},${l.longitude}&distance=10`), {
       Authorization: `Bearer ${access_token}`
-    })).then(decodePets)
+    })).then(assert(decodePets))
 
-export const decodeToken = (x: unknown): PetfinderToken => x as PetfinderToken
+export const decodeToken = pipe(record, properties({
+  access_token: string
+}))
 
-export const decodePets = (x: unknown): readonly Pet[] => (x as PetfinderPets).animals.map(toPet)
-
-export const toPet = ({ name, url, photos }: Animal): Pet =>
-  ({ name, url, photoUrl: photos[0]?.medium })
+export const decodePets = mapOutput(pipe(record, properties({
+  animals: pipe(list, listOf(pipe(record, properties({
+    name: string,
+    url: string,
+    photos: pipe(list, listOf(pipe(record, properties({
+      medium: pipe(string, url)
+    }))))
+  }))))
+})), ({ animals }) => animals.map(({ name, url, photos }) => ({ name, url, photoUrl: photos[0]?.medium })))

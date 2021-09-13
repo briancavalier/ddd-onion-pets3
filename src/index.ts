@@ -33,6 +33,6 @@ fastify({ logger: true })
     if (ip == null) return res.status(400).send()
 
     const pets = await getPetsNearIPAddress(ip)
-    return res.header('content-type', 'application/json').send(pets)
+    return res.header('content-type', 'application/json').send(JSON.stringify(pets, null, '  '))
   })
   .listen(3000).then(x => console.log(`Ready: ${x}`))

@@ -1,3 +1,5 @@
+import { Json, assert, json } from '../lib/decode'
+
 export type RequestHeaders = Record<string, number | string | string[]>
 export type ResponseHeaders = Record<string, string | string[] | undefined>
 
@@ -25,7 +27,7 @@ export const readResponseBody = async <A>(r: Response<A>): Promise<string> => {
     : d
 }
 
-export const jsonRequest = <A>(http: Http, { headers, ...r }: Request<A>): Promise<A> =>
+export const jsonRequest = (http: Http, { headers, ...r }: Request<Json>): Promise<Json> =>
   http({
     ...r,
     headers: {
@@ -33,4 +35,4 @@ export const jsonRequest = <A>(http: Http, { headers, ...r }: Request<A>): Promi
       'Content-Type': 'application/json',
       ...headers
     }
-  }).then(readResponseBody).then(JSON.parse)
+  }).then(readResponseBody).then(assert(json))

@@ -1,7 +1,7 @@
 export type Pet = {
   readonly name: string,
   readonly url: string,
-  readonly photoUrl?: string
+  readonly photoUrl?: URL
 }
 
 export type Location = {

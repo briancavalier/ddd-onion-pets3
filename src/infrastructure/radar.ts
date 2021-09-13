@@ -21,9 +21,8 @@ export const decodeRadarLocation = (x: unknown): Location | null => {
   const { address } = x as Record<string, Record<string, unknown>>
   if (!address) return null
 
-  console.log(address)
   const { latitude, longitude, city, state } = address
-  console.log(latitude, longitude, city, state)
+
   if (
     typeof latitude !== 'number' ||
     typeof longitude !== 'number' ||
