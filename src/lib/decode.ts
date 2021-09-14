@@ -1,19 +1,24 @@
+import { Json } from './json'
+
 export type Decode<I, O, E> = (i: I) => DecodeResult<O, E>
 
 export type DecodeResult<O, E> = Ok<O> | Fail<E>
 export type Ok<O> = { ok: true, value: O }
 export type Fail<E> = { ok: false, error: E }
 
-export type OutputOf<D extends Decode<unknown, unknown, unknown>> = D extends Decode<any, infer O, any> ? O : never
-export type ErrorOf<D extends Decode<unknown, unknown, unknown>> = D extends Decode<any, any, infer E> ? E : never
+export type OutputOf<D extends Decode<unknown, unknown, unknown>> = D extends Decode<unknown, infer O, unknown> ? O : never
+export type ErrorOf<D extends Decode<unknown, unknown, unknown>> = D extends Decode<unknown, unknown, infer E> ? E : never
 
 export const ok = <O>(value: O): Ok<O> => ({ ok: true, value })
 export const fail = <E>(error: E): Fail<E> => ({ ok: false, error })
 
+export const name = <H extends string, I, O, E>(hint: H, d: Decode<I, O, E>): Decode<I, O, Label<H, E>> =>
+  mapError(d, label(hint))
+
 export const decode = <I, O, E>(d: Decode<I, O, E>, i: I): DecodeResult<O, E> =>
   d(i)
 
-class DecodeAssertError<D> extends Error {
+class DecodeAssertError extends Error {
   constructor(message: string) {
     super(message)
   }
@@ -22,6 +27,7 @@ class DecodeAssertError<D> extends Error {
 export const assert = <I, O, E>(d: Decode<I, O, E>) => (i: I): O => {
   const r = decode(d, i)
   if (r.ok) return r.value
+  console.log(JSON.stringify(r, null, '  '))
   throw new DecodeAssertError(stringifyError(r.error as unknown as Node<string>))
 }
 
@@ -42,6 +48,11 @@ export const mapError = <I, O, R, E>(d: Decode<I, O, E>, f: (e: E) => R): Decode
     const o = decode(d, i)
     return o.ok ? o : fail(f(o.error))
   }
+
+export type Label<L, A> = { type: 'Label', label: L, value: A }
+
+export const label = <L>(label: L) => <A>(value: A): Label<L, A> =>
+  ({ type: 'Label', label, value })
 
 export type Expected<L, A> = { type: 'Expected', label: L, value: A }
 
@@ -137,11 +148,6 @@ export const url = (s: string): DecodeResult<URL, InvalidUrlString> => {
   }
 }
 
-export type Json = number | string | boolean | readonly Json[] | JsonObject
-
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
-export interface JsonObject extends Record<string, Json> {}
-
 export type JsonParseError = { type: 'JsonParseError', error: unknown }
 
 export const json = (s: string): DecodeResult<Json, JsonParseError> => {
@@ -152,18 +158,23 @@ export const json = (s: string): DecodeResult<Json, JsonParseError> => {
   }
 }
 
+export const renderFail = ({ error }: Fail<Stringifiable>): string =>
+  stringifyError(error)
+
 const pad = (n: number, p = ' '): string => n > 1 ? p + pad(n - 1, p) : p
 
 type Node<T extends string> = { type: T }
-type Stringifiable = string | Node<string> | readonly Stringifiable[] | KeyItemsFailed<readonly Stringifiable[]> | UnexpectedInput<unknown> | Expected<unknown, Node<string>> | AtKey<string, Node<string>> | Missing
+type ErrorAST = KeyItemsFailed<readonly Stringifiable[]> | UnexpectedInput<unknown> | Expected<unknown, Node<string>> | Label<unknown, Node<string>> | AtKey<string, Node<string>> | Missing
+type Stringifiable = string | Node<string> | readonly Stringifiable[] | ErrorAST
 
 export const stringifyError = (s: Stringifiable, depth = 0): string => {
   if (typeof s === 'string') return s
   if (Array.isArray(s)) return s.map(x => stringifyError(x, depth + 1)).join('\n')
 
-  const n = s as KeyItemsFailed<readonly Stringifiable[]> | UnexpectedInput<unknown> | Expected<unknown, Node<string>> | AtKey<string, Node<string>> | Missing
+  const n = s as ErrorAST
   if (n.type === 'KeyItemsFailed') return `\n${stringifyError(n.errors, depth + 1)}`
   if (n.type === 'AtKey') return `${pad(depth)}${n.key}: ${stringifyError(n.error, depth + 1)}`
+  if (n.type === 'Label') return `[${n.label}] ${stringifyError(n.value, depth + 1)}`
   if (n.type === 'Expected') return `expected ${n.label}, got ${stringifyError(n.value, depth + 1)}`
   if (n.type === 'UnexpectedInput') return `${n.input}: ${typeof n.input}`
   if (n.type === 'Missing') return `<missing>`
@@ -171,7 +182,7 @@ export const stringifyError = (s: Stringifiable, depth = 0): string => {
   const { type, ...data } = n as Node<string>
   return `${type}: ${data}`
 }
-
+`
 // const p = pipe(list, listOf(pipe(record, properties({
 //   name: string,
 //   age: number,
@@ -180,7 +191,7 @@ export const stringifyError = (s: Stringifiable, depth = 0): string => {
 //   }))
 // }))))
 
-// const r = p([
+// const r = decode(name('people array', p), [
 //   { name: 'Bob', age: 'a', address: { street: 'a' } },
 //   { name: 'Alice', age: 27, address: {} },
 //   { name: 'Dennis', age: 37, address: { street: 'b' } }
@@ -188,3 +199,4 @@ export const stringifyError = (s: Stringifiable, depth = 0): string => {
 
 // console.log(r)
 // if (!r.ok) console.log(stringifyError(r.error))
+`

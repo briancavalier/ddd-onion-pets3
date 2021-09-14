@@ -1,4 +1,5 @@
-import { Json, assert, json } from '../lib/decode'
+import { assert, json } from '../lib/decode'
+import { Json } from '../lib/json'
 
 export type RequestHeaders = Record<string, number | string | string[]>
 export type ResponseHeaders = Record<string, string | string[] | undefined>

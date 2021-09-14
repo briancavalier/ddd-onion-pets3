@@ -1,10 +1,10 @@
 import fastify from 'fastify'
 
-import { IPAddress, getPetsNear } from './application/getPetsNear'
-import { http } from './infrastructure/http-node'
-import { PetfinderAuth, getPetfinderPets } from './infrastructure/petfinder'
-import { getIPAddressLocation } from './infrastructure/radar'
-import { assert, expected, is, mapError, pipe, properties, record, string } from './lib/decode'
+import { IPAddress, getPetsNear } from '../application/getPetsNear'
+import { http } from '../infrastructure/http-node'
+import { PetfinderAuth, getPetfinderPets } from '../infrastructure/petfinder'
+import { getIPAddressLocation } from '../infrastructure/radar'
+import { assert, expected, is, mapError, name, pipe, properties, record, string } from '../lib/decode'
 
 const decodeEnv = pipe(record, properties({
   /* eslint-disable @typescript-eslint/naming-convention */
@@ -14,7 +14,7 @@ const decodeEnv = pipe(record, properties({
   /* eslint-enable @typescript-eslint/naming-convention */
 }))
 
-const { PETFINDER_ID, PETFINDER_SECRET, RADAR_API_KEY } = assert(decodeEnv)(process.env)
+const { PETFINDER_ID, PETFINDER_SECRET, RADAR_API_KEY } = assert(name('process.env', decodeEnv))(process.env)
 
 const petfinderAuth: PetfinderAuth = {
   /* eslint-disable @typescript-eslint/naming-convention */
@@ -37,9 +37,11 @@ const decodeIPAddress = mapError(is((x: string): x is IPAddress =>
 const getPetsNearIPAddress = getPetsNear(env)
 
 fastify({ logger: true })
-  .get('/', async (req, res) => {
-    const ip = assert(decodeIPAddress)(req.ip) //('72.65.255.176')
-    const pets = await getPetsNearIPAddress(ip)
-    return res.header('content-type', 'application/json').send(JSON.stringify(pets, null, '  '))
+  .get('/', async (req) => {
+    const ip = assert(name('request.ip', decodeIPAddress))(req.ip)
+    // const ip = assert(name('request.ip', decodeIPAddress))('72.65.255.176')
+    // const ip = assert(name('request.ip', decodeIPAddress))('72')
+
+    return getPetsNearIPAddress(ip)
   })
   .listen(3000).then(x => console.log(`Ready: ${x}`))
