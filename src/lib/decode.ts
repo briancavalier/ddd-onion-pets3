@@ -6,6 +6,7 @@ export type DecodeResult<O, E> = Ok<O> | Fail<E>
 export type Ok<O> = { ok: true, value: O }
 export type Fail<E> = { ok: false, error: E }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type InputOf<D extends Decode<any, unknown, unknown>> = D extends Decode<infer I, unknown, unknown> ? I : never
 export type OutputOf<D extends Decode<unknown, unknown, unknown>> = D extends Decode<unknown, infer O, unknown> ? O : never
 export type ErrorOf<D extends Decode<unknown, unknown, unknown>> = D extends Decode<unknown, unknown, infer E> ? E : never

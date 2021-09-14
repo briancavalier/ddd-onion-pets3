@@ -38,9 +38,9 @@ const getPetsNearIPAddress = getPetsNear(env)
 
 fastify({ logger: true })
   .get('/', async (req) => {
-    // const ip = assert(context('request.ip', decodeIPAddress))(req.ip)
+    const ip = assert(context('request.ip', decodeIPAddress))(req.ip)
     // const ip = assert(context('request.ip', decodeIPAddress))('72.65.255.176')
-    const ip = assert(context('request.ip', decodeIPAddress))('72')
+    // const ip = assert(context('request.ip', decodeIPAddress))('72')
 
     return getPetsNearIPAddress(ip)
   })
