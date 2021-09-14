@@ -1,24 +1,20 @@
-import { Location, Pet } from '../domain/pets'
+export type GetPets<Location, Pets> = (l: Location) => Promise<Pets>
 
-export type GetPets = (l: Location) => Promise<readonly Pet[]>
+export type GetLocation<UserInfo, Location> = (u: UserInfo) => Promise<Location | null>
 
-export type GetLocation = (u: IPAddress) => Promise<Location | null>
+export type AdoptablePetsNear<UserInfo, Location, Pets> =
+  | { type: 'UnknownLocation', userInfo: UserInfo }
+  | { type: 'Pets', location: Location, pets: Pets }
 
-export type IPAddress = string & { _type: 'IPAddress' }
-
-export type AdoptablePetsNear =
-  | { type: 'UnknownLocation', ipAddress: IPAddress }
-  | { type: 'Pets', location: Location, pets: readonly Pet[] }
-
-export type GetPetsNearEnv = {
-  getLocation: GetLocation
-  getPets: GetPets
+export type GetPetsNearEnv<UserInfo, Location, Pets> = {
+  getLocation: GetLocation<UserInfo, Location>
+  getPets: GetPets<Location, Pets>
 }
 
-export const getPetsNear = ({ getLocation, getPets }: GetPetsNearEnv) =>
-  async (ipAddress: IPAddress): Promise<AdoptablePetsNear> => {
-    const location = await getLocation(ipAddress)
+export const getPetsNear = <UserInfo, Location, Pets>({ getLocation, getPets }: GetPetsNearEnv<UserInfo, Location, Pets>) =>
+  async (userInfo: UserInfo): Promise<AdoptablePetsNear<UserInfo, Location, Pets>> => {
+    const location = await getLocation(userInfo)
     return location === null
-      ? { type: 'UnknownLocation', ipAddress: ipAddress }
+      ? { type: 'UnknownLocation', userInfo }
       : { type: 'Pets', location, pets: await getPets(location) }
   }

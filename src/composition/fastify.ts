@@ -1,9 +1,9 @@
 import fastify from 'fastify'
 
-import { IPAddress, getPetsNear } from '../application/getPetsNear'
+import { getPetsNear } from '../application/getPetsNear'
 import { http } from '../infrastructure/http-node'
 import { PetfinderAuth, getPetfinderPets } from '../infrastructure/petfinder'
-import { getIPAddressLocation } from '../infrastructure/radar'
+import { IPAddress, getIPAddressLocation } from '../infrastructure/radar'
 import { assert, context, is, pipe, properties, record, string } from '../lib/decode'
 
 const decodeEnv = pipe(record, properties({
