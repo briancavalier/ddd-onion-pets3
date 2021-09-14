@@ -182,21 +182,3 @@ export const stringifyError = (s: Stringifiable, depth = 0): string => {
   const { type, ...data } = n as Node<string>
   return `${type}: ${data}`
 }
-`
-// const p = pipe(list, listOf(pipe(record, properties({
-//   name: string,
-//   age: number,
-//   address: pipe(record, properties({
-//     street: string
-//   }))
-// }))))
-
-// const r = decode(name('people array', p), [
-//   { name: 'Bob', age: 'a', address: { street: 'a' } },
-//   { name: 'Alice', age: 27, address: {} },
-//   { name: 'Dennis', age: 37, address: { street: 'b' } }
-// ])
-
-// console.log(r)
-// if (!r.ok) console.log(stringifyError(r.error))
-`
