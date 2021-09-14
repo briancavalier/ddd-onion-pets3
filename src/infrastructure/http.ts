@@ -31,8 +31,10 @@ export const jsonRequest = (http: Http, { headers, ...r }: Request<Json>): Promi
   http({
     ...r,
     headers: {
+      /* eslint-disable @typescript-eslint/naming-convention */
       Accept: 'application/json',
       'Content-Type': 'application/json',
+      /* eslint-enable @typescript-eslint/naming-convention */
       ...headers
     }
   }).then(readResponseBody).then(assert(json))

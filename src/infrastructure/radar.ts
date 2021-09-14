@@ -2,9 +2,8 @@
 
 import { IPAddress } from '../application/getPetsNear'
 import { Location } from '../domain/pets'
-import {
-  assert, mapOutput, nullable, number, pipe, properties, record, string
-} from '../lib/decode'
+import { assert, mapOutput, nullable, number, pipe, properties, record, string } from '../lib/decode'
+
 import { Http, get, jsonRequest } from './http'
 
 export type RadarEnv = {
@@ -14,6 +13,7 @@ export type RadarEnv = {
 
 export const getIPAddressLocation = ({ http, radarAPIKey }: RadarEnv) => (ip: IPAddress): Promise<Location | null> =>
   jsonRequest(http, get(new URL(`https://api.radar.io/v1/geocode/ip?ip=${ip}`), {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     Authorization: radarAPIKey
   }))
     .then(assert(decodeRadarLocation))

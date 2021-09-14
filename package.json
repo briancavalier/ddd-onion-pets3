@@ -4,19 +4,32 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "nodemon -r esbuild-register --ext ts,json src/index"
+    "start": "nodemon -r esbuild-register --ext ts,json src/index",
+    "prepare": "husky install"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "@types/node": "^16.9.0",
+    "@typescript-eslint/eslint-plugin": "^4.31.1",
+    "@typescript-eslint/parser": "^4.31.1",
     "esbuild": "^0.12.26",
     "esbuild-register": "^3.0.0",
+    "eslint": "^7.32.0",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-plugin-import": "^2.24.2",
+    "eslint-plugin-unused-imports": "^1.1.4",
+    "husky": "^7.0.2",
+    "lint-staged": "^11.1.2",
     "nodemon": "^2.0.12",
+    "prettier": "^2.4.0",
     "typescript": "^4.4.2"
   },
   "dependencies": {
     "fastify": "^3.21.0"
+  },
+  "lint-staged": {
+    "*.{ts,js}": "eslint --cache --fix"
   }
 }
