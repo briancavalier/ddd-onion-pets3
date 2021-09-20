@@ -1,20 +1,21 @@
 import fastify from 'fastify'
 
-import { IPAddress, getPetsNear } from '../application/getPetsNear'
+import { CityState, Geo, IPAddress, getPetsNear } from '../application/getPetsNear'
 import { http } from '../infrastructure/http-node'
 import { PetfinderAuth, getPetfinderPets } from '../infrastructure/petfinder'
-import { getIPAddressLocation } from '../infrastructure/radar'
-import { assert, context, is, pipe, properties, record, string } from '../lib/decode'
+import { getRadarLocation } from '../infrastructure/radar'
+import { assert, context, float, is, mapInput, mapOutput, or, pipe, properties, record, string, url } from '../lib/decode'
 
 const decodeEnv = pipe(record, properties({
   /* eslint-disable @typescript-eslint/naming-convention */
   PETFINDER_ID: string,
   PETFINDER_SECRET: string,
-  RADAR_API_KEY: string
+  RADAR_API_KEY: string,
+  RADAR_BASE_URL: pipe(string, url)
   /* eslint-enable @typescript-eslint/naming-convention */
 }))
 
-const { PETFINDER_ID, PETFINDER_SECRET, RADAR_API_KEY } = assert(context('process.env', decodeEnv))(process.env)
+const { PETFINDER_ID, PETFINDER_SECRET, RADAR_API_KEY, RADAR_BASE_URL } = assert(context('process.env', decodeEnv))(process.env)
 
 const petfinderAuth: PetfinderAuth = {
   /* eslint-disable @typescript-eslint/naming-convention */
@@ -24,24 +25,43 @@ const petfinderAuth: PetfinderAuth = {
   /* eslint-enable @typescript-eslint/naming-convention */
 }
 
-const radarAPIKey = RADAR_API_KEY
+const radar = {
+  baseUrl: RADAR_BASE_URL,
+  apiKey: RADAR_API_KEY
+}
 
 const env = {
-  getLocation: getIPAddressLocation({ radarAPIKey, http }),
+  getLocation: getRadarLocation({ radar, http }),
   getPets: getPetfinderPets({ petfinderAuth, http })
 }
+
+const decodeGeo = properties({ lat: pipe(string, float), lon: pipe(string, float) })
+const decodeCityState = properties({ city: string, state: string })
+
+const decodeQuery = or(
+  mapOutput(decodeGeo, geo => ({ type: 'Geo', ...geo }) as const),
+  mapOutput(decodeCityState, cityState => ({ type: 'CityState', ...cityState }) as const)
+)
 
 const decodeIPAddress = is('IPAddress', (x: string): x is IPAddress =>
   /(([0-9]{1,3}.){3}[0-9]{1,3})/.test(x))
 
-const getPetsNearIPAddress = getPetsNear(env)
+const decodeRequestIPAddress = mapOutput(decodeIPAddress, ip => ({ type: 'IPAddress', ip }) as const)
+
+type HasIPAddress = { ip: string }
+type HasQuery<Query> = { query: Query }
+
+const decodeLocationQuery = or(
+  mapInput((r: HasQuery<Geo | CityState>) => r.query, decodeQuery),
+  mapInput((r: HasIPAddress) => r.ip, decodeRequestIPAddress)
+)
+
+const getPets = getPetsNear(env)
 
 fastify({ logger: true })
-  .get('/', async (req) => {
-    const ip = assert(context('request.ip', decodeIPAddress))(req.ip)
-    // const ip = assert(context('request.ip', decodeIPAddress))('72.65.255.176')
-    // const ip = assert(context('request.ip', decodeIPAddress))('72')
-
-    return getPetsNearIPAddress(ip)
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  .get<{ Querystring: Geo | CityState }>('/', async (req) => {
+    const r = decodeLocationQuery(req)
+    return r.ok ? getPets(r.value) : { status: 401, properties: r.error }
   })
   .listen(3000).then(x => console.log(`Ready: ${x}`))

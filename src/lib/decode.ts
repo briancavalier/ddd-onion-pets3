@@ -14,36 +14,38 @@ export type ErrorOf<D extends Decode<unknown, unknown, unknown>> = D extends Dec
 export const ok = <O>(value: O): Ok<O> => ({ ok: true, value })
 export const fail = <E>(error: E): Fail<E> => ({ ok: false, error })
 
-export const decode = <I, O, E>(d: Decode<I, O, E>, i: I): DecodeResult<O, E> =>
+export const decode = <I, O, E>(d: Decode<I, O, E>) => (i: I): DecodeResult<O, E> =>
+  runDecode(d, i)
+
+const runDecode = <I, O, E>(d: Decode<I, O, E>, i: I): DecodeResult<O, E> =>
   d(i)
 
-class DecodeAssertError extends Error {
-  constructor(message: string) {
-    super(message)
-  }
-}
+class DecodeAssertError extends Error {}
 
 export const assert = <I, O, E>(d: Decode<I, O, E>) => (i: I): O => {
-  const r = decode(d, i)
+  const r = runDecode(d, i)
   if (r.ok) return r.value
   throw new DecodeAssertError(renderFail(r as unknown as Fail<Stringifiable>))
 }
 
 export const pipe = <I, X, O, E1, E2>(d1: Decode<I, X, E1>, d2: Decode<X, O, E2>): Decode<I, O, E1 | E2> =>
   i => {
-    const x = decode(d1, i)
-    return x.ok ? decode(d2, x.value) : x
+    const x = runDecode(d1, i)
+    return x.ok ? runDecode(d2, x.value) : x
   }
+
+export const mapInput = <I, H, O, E> (f: (i: I) => H, d: Decode<H, O, E>): Decode<I, O, E> =>
+  i => runDecode(d, f(i))
 
 export const mapOutput = <I, O, R, E>(d: Decode<I, O, E>, f: (o: O) => R): Decode<I, R, E> =>
   i => {
-    const o = decode(d, i)
+    const o = runDecode(d, i)
     return o.ok ? ok(f(o.value)) : fail(o.error)
   }
 
 export const mapError = <I, O, R, E>(d: Decode<I, O, E>, f: (e: E) => R): Decode<I, O, R> =>
   i => {
-    const o = decode(d, i)
+    const o = runDecode(d, i)
     return o.ok ? o : fail(f(o.error))
   }
 
@@ -82,6 +84,10 @@ export const is = <Hint, A extends I, I = unknown>(expected: Hint, p: (input: I)
 export const number = is('number', (x: unknown): x is number => typeof x === 'number')
 export const string = is('string', (x: unknown): x is string => typeof x === 'string')
 export const boolean = is('boolean', (x: unknown): x is boolean => typeof x === 'boolean')
+export const unknown = is('unknown', (x: unknown): x is unknown => true)
+
+export const float = (s: string): DecodeResult<number, never> =>
+  ok(parseFloat(s))
 
 export const list = is('unknown[]', (x: unknown): x is readonly unknown[] => Array.isArray(x))
 
@@ -90,17 +96,41 @@ export type AtKey<K, E> = { type: 'AtKey', key: K, error: E }
 
 export const listOf = <I, O, E>(d: Decode<I, O, E>): Decode<readonly I[], readonly O[], KeyItemsFailed<readonly AtKey<number, E>[]>> =>
   ai => {
+    console.log(ai)
     const r: unknown[] = []
     const errors: AtKey<number, E>[] = []
     for (let k = 0; k < ai.length; k++) {
-      const ir = decode(d, ai[k])
+      const ir = runDecode(d, ai[k])
       if (!ir.ok) errors.push({ type: 'AtKey', key: k, error: ir.error })
       else r.push(ir.value)
     }
     return errors.length === 0 ? ok(r) as Ok<readonly O[]> : fail({ type: 'KeyItemsFailed', errors })
   }
 
-export const record = is('Record<string, unknown>', (x: unknown): x is Record<string, unknown> => Object.prototype.toString.call(x) === '[object Object]')
+export const rec = <K extends PropertyKey, V, KE, VE>(keys: Decode<unknown, K, KE>, values: Decode<unknown, V, VE>): Decode<unknown, Record<K, V>, UnexpectedInput<'Record<string, unknown>', unknown> | KeyItemsFailed<readonly AtKey<unknown, KE | VE>[]>> =>
+  i => {
+    if (Object.prototype.toString.call(i) !== '[object Object]') return fail({ type: 'UnexpectedInput', expected: 'Record<string, unknown>', input: i })
+    const r = i as Record<PropertyKey, unknown>
+    const ks = Object.keys(r)
+    const errors: AtKey <unknown, KE | VE>[] = []
+    const result = {} as Record<K, V>
+
+    for(const k of ks) {
+      const kr = keys(k)
+      if(!kr.ok) errors.push({ type: 'AtKey', key: k, error: kr.error })
+      else {
+        const kv = values(r[k])
+        if (!kv.ok) errors.push({ type: 'AtKey', key: k, error: kv.error })
+        else result[kr.value] = kv.value
+      }
+    }
+
+    return errors.length === 0
+      ? ok(result)
+      : fail({ type: 'KeyItemsFailed', errors })
+  }
+
+export const record = rec(string, unknown)//is('Record<string, unknown>', (x: unknown): x is Record<string, unknown> => Object.prototype.toString.call(x) === '[object Object]')
 
 type DecodeRecordInput<R extends Record<string, Decode<unknown, unknown, unknown>>> = {
   readonly [K in keyof R as string]: InputOf<R[K]>
@@ -119,7 +149,7 @@ export const properties = <R extends Record<string, Decode<unknown, unknown, unk
     const ro: Record<string, unknown> = {}
     const errors: AtKey<keyof R, DecodeRecordErrors<R>>[] = []
     for (const k of Object.keys(r)) {
-      const ir = decode(r[k], ri[k]) as DecodeResult<DecodeRecordResult<R>[keyof R], DecodeRecordErrors<R>>
+      const ir = runDecode(r[k], ri[k]) as DecodeResult<DecodeRecordResult<R>[keyof R], DecodeRecordErrors<R>>
       if (!ir.ok) errors.push({ type: 'AtKey', key: k, error: ir.error })
       else ro[k] = ir.value
     }
@@ -156,7 +186,7 @@ const pad = (n: number, p = ' '): string => n > 1 ? p + pad(n - 1, p) : p
 
 type Node<T extends string> = { type: T }
 type ErrorAST = KeyItemsFailed<readonly Stringifiable[]> | UnexpectedInput<unknown, unknown> | Label<unknown, Node<string>> | AtKey<string, Node<string>>
-type Stringifiable = string | Node<string> | readonly Stringifiable[] | ErrorAST
+type Stringifiable = string | Error | Node<string> | readonly Stringifiable[] | ErrorAST
 
 export const stringifyError = (s: Stringifiable, depth = 0): string => {
   if (typeof s === 'string') return s
@@ -169,5 +199,5 @@ export const stringifyError = (s: Stringifiable, depth = 0): string => {
   if (n.type === 'UnexpectedInput') return `expected ${n.expected}, got ${n.input}: ${typeof n.input}`
 
   const { type, ...data } = n as Node<string>
-  return `${type}: ${data}`
+  return `${type}: ${JSON.stringify(data)}`
 }
