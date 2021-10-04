@@ -9,6 +9,5 @@ export const http = <A>({ url, ...options }: Request<A>): Promise<Response<A>> =
       ? requestHttps(url.toString(), options, resolve)
       : requestHttp(url.toString(), options, resolve)
 
-    if (options.method === 'POST' && options.body) c.write(options.body)
-    c.end()
+    return c.end(options.method === 'POST' && options.body)
   })

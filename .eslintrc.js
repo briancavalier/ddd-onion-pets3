@@ -29,6 +29,24 @@ module.exports = {
           order: 'asc',
           caseInsensitive: false
         }
+      },
+    ],
+    'import/no-restricted-paths': [
+      'error',
+      {
+        basePath: './src',
+        zones: [
+          { target: 'domain', from: 'application' },
+          { target: 'domain', from: 'infrastructure' },
+          { target: 'domain', from: 'composition' },
+          { target: 'application', from: 'infrastructure' },
+          { target: 'application', from: 'composition' },
+          { target: 'infrastructure', from: 'composition' },
+          { target: 'lib', from: 'domain' },
+          { target: 'lib', from: 'application' },
+          { target: 'lib', from: 'infrastructure' },
+          { target: 'lib', from: 'composition' }
+        ]
       }
     ],
     // Enable sort-imports to sort named imports within a single import

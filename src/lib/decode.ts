@@ -96,7 +96,6 @@ export type AtKey<K, E> = { type: 'AtKey', key: K, error: E }
 
 export const listOf = <I, O, E>(d: Decode<I, O, E>): Decode<readonly I[], readonly O[], KeyItemsFailed<readonly AtKey<number, E>[]>> =>
   ai => {
-    console.log(ai)
     const r: unknown[] = []
     const errors: AtKey<number, E>[] = []
     for (let k = 0; k < ai.length; k++) {
